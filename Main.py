@@ -4,6 +4,12 @@ import ModelLgbm
 import numpy as np
 from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score
 import shap
+
+path_data = ['train_data/september.xlsx', 'train_data/october.xlsx', 'train_data/april1.xlsx', 'train_data/april2.xlsx']
+dates = ['2019-08-31', '2019-10-01', '2020-04-01', '2020-04-14']
+path_real_churn = ['train_data/real_churn_old.csv', 'train_data/real_churn_new.csv']
+
+
 cat_features = ['Регион', 'Филиал', 'Сегмент контракта',
                 'Топовый Оператор-конкурент по исходящим звонкам фиксовых номеров',
                 'Топовый Оператор-конкурент по входящим звонкам фиксовых номеров',
@@ -12,10 +18,10 @@ cat_features = ['Регион', 'Филиал', 'Сегмент контракт
                 'Топовый Оператор-конкурент по заходам на сайт фиксовых ip',
                 'Топовый Оператор-конкурент по заходам на сайт контактных номеров']
 
-best_params_catboost = {'n_estimators': 100,
-                             'cat_features':cat_features, 'verbose': 0}
+best_params_catboost = {'n_estimators': 200,  'max_depth': 4,
+                              'cat_features': cat_features, 'verbose': 0}
 
-best_params_lgbm = {'num_iterations': 300, 'max_depth': 5}
+best_params_lgbm = {'num_iterations': 250, 'max_depth': 5}
 
 params_catboost_cv = {'depth': [3, 6, 4, 5, 7, 8, 9, 10],
                       'n_estimators': [250, 50, 100, 500, 1000],
@@ -49,9 +55,9 @@ def evalute_test(y_test, y_pred, y_probs):
 
 def load_data_for_models(val_size=0.2, lgbm=True):
     dataLoader = DataPrepare.DataLoader(val_size, lgbm)
-    dataLoader.load_from_dir(path_data=['train_data/september.xlsx', 'train_data/october.xlsx', 'train_data/april1.xlsx', 'train_data/april1.xlsx'],
-                                   path_real_churn=['train_data/real_churn_old.csv', 'train_data/real_churn_new.csv'],
-                             dates=['2019-08-31', '2019-10-01', '2020-04-01', '2020-04-14'])
+    dataLoader.load_from_dir(path_data=path_data,
+                                   path_real_churn=path_real_churn,
+                             dates=dates)
     X_train = dataLoader.all_train_X
     y_train = dataLoader.all_train_y
     X_val = dataLoader.all_val_X
@@ -67,7 +73,7 @@ def load_data_for_models(val_size=0.2, lgbm=True):
 def load_test(test_data_path, date, lgbm=True):
     dataLoader = DataPrepare.DataLoader(val_size=0, lgbm = lgbm)
     dataLoader.load_from_dir(path_data=[test_data_path],
-                                   path_real_churn=['train_data/real_churn_old.csv', 'train_data/real_churn_new.csv'], dates=date, test=True)
+                                   path_real_churn=path_real_churn, dates=date, test=True)
     X_test = dataLoader.test_data
     if lgbm:
         X_test_ohe = dataLoader.test_data_ohe
@@ -75,9 +81,8 @@ def load_test(test_data_path, date, lgbm=True):
     else: return X_test, None
 
 
-
 class Model:
-    def __init__(self, w=0.5, val_size=0.1, lgbm=True, validation=True):
+    def __init__(self, w=1.0, val_size=0.01, lgbm=True, validation=True):
         self.val_size = val_size
         self.lgbm = lgbm
         self.validation = validation
@@ -118,20 +123,14 @@ class Model:
                 shap.summary_plot(shap_test, X_train, max_display=10, auto_size_plot=True)
 
 
-
-
     def test(self, test_data_path, dates):
         X_test, X_test_ohe = load_test(test_data_path, dates, lgbm=self.lgbm)
         preds_cat = self.model_catboost.predict_proba(X_test)
         if self.lgbm:
             preds_lgbm = self.model_lgbm.predict_proba(X_test_ohe)
-            preds = self.w * preds_cat + self.w * preds_lgbm
+            preds = self.w * preds_cat + (1-self.w) * preds_lgbm
         else:
             preds = [preds_cat]
 
         X_test['Churn'] = preds
-
-
-        return X_test.loc[:, ['Регион', 'Филиал','Churn']]
-
-
+        return X_test.loc[:, ['Регион', 'Сегмент контракта', 'Филиал','Churn']]

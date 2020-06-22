@@ -5,7 +5,6 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import GridSearchCV
 
-
 class Model:
 
     def __init__(self, model):

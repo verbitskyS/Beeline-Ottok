@@ -9,7 +9,7 @@ import pickle
 
 
 class DataLoader:
-    def __init__(self, val_size=0.2, lgbm=True, save_train=False):
+    def __init__(self, val_size=0.05, lgbm=True, save_train=False):
         self.val_size = val_size
         self.lgbm = lgbm
         self.all_train_X = None
@@ -23,7 +23,7 @@ class DataLoader:
         self.all_val_X = None
         self.all_val_y = None
         self.all_val_X_ohe = None
-        self.true_columns = ['Life_Time', 'Индикатор интеракций',
+        self.true_columns = ['Регион', 'Life_Time', 'Индикатор интеракций',
                              'Индикатор наличия мобильного договора на ИНН',
                              'Количество входящих звонков топовому оператору-конкуренту',
                              'Количество входящих звонков топовому оператору-конкуренту.1',
@@ -34,7 +34,7 @@ class DataLoader:
                              'Предиктор по ТТ (рост на 15% и более)',
                              'Предиктор по блокировкам',
                              'Предиктор по исходящему data-трафику', 'Предиктор по исходящему голосовому трафику',
-                             'Предиктор по отсутствию модификаций/подключений', 'Регион', 'Сегмент контракта',
+                             'Предиктор по отсутствию модификаций/подключений', 'Сегмент контракта',
                              'Топовый Оператор-конкурент по входящим звонкам контактных номеров',
                              'Топовый Оператор-конкурент по входящим звонкам фиксовых номеров',
                              'Топовый Оператор-конкурент по заходам на сайт контактных номеров',
@@ -100,8 +100,11 @@ class DataLoader:
         if self.save_train: all_data.to_csv('train_prepared.csv', index=False)
 
         if not test:
-            all_data = pd.concat([all_data, all_data[all_data.churn == 1],
-                                  all_data[all_data.churn == 1]])  # дублируем данные, чтобы классы стали более сбалнсированные
+            all_data = pd.concat([all_data, all_data[all_data.churn == 1],all_data, all_data[all_data.churn == 1],
+                                  all_data[all_data.churn == 1], all_data[all_data.churn == 1],
+                                  all_data[all_data.churn == 1], all_data[all_data.churn == 1],
+                                  all_data[all_data.churn == 1], all_data[all_data.churn == 1]
+                                  ] )  # дублируем данные, чтобы классы стали более сбалнсированные
             self.all_train_X = all_data.drop(['churn'], axis=1)
             self.all_train_y = all_data.churn
 
@@ -173,6 +176,7 @@ class DataLoader:
             data[i]['churn'] = 0
             data[i].loc[list(set(data[i].index) & set(train_indeces)), 'churn'] = 1
 
+            print(list(set(list(data[i])) - set(self.true_columns)))
             data[i] = data[i].drop(list(set(list(data[i])) - set(self.true_columns)), axis=1)  #выбрасываем лишние стобцы
 
             data_real_churn['churn'] = 1

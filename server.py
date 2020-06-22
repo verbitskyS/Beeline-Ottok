@@ -32,9 +32,10 @@ def upload_file():
             path_to_test_data = os.path.join(TEST_DIRECTORY, TABLE_NAME[extension])
             df.save(path_to_test_data)
             data = model.test(path_to_test_data, dates=[date]).sort_values(by='Churn', ascending=False)\
-                .rename(columns={'Churn': 'Уверенность модели'}).reset_index().to_html()
+                .rename(columns={'Churn': 'Уверенность модели'}).reset_index()
+            data.to_csv('test_churn.csv', index=False)
             print('READY')
-            return render_template(HTML_FILE, data=data)
+            return render_template(HTML_FILE, data=data.to_html())
         else:
             return render_template(HTML_FILE, error=error['format'])
 
@@ -48,4 +49,4 @@ if __name__ == '__main__':
     model = Model()
     #model.load()
     model.train()
-    app.run(debug=False, port='8810')
+    app.run(debug=False, port='9111')
